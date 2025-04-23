@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tic Tac Toe - Best of 3</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f0f0f0;
+    }
+    h1 {
+      margin-top: 20px;
+    }
+    #game-board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      gap: 5px;
+      justify-content: center;
+      margin: 20px auto;
+    }
+    .cell {
+      width: 100px;
+      height: 100px;
+      font-size: 60px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: white;
+      border: 2px solid #333;
+    }
+    .red { color: red; }
+    .blue { color: blue; }
+    #message {
+      margin-top: 20px;
+      font-size: 20px;
+    }
+    #actions button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 10px;
+      cursor: pointer;
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tic Tac Toe - Best of 3</h1>
+  <div id="symbol-select">
+    <p>Choose your symbol:</p>
+    <button onclick="chooseSymbol('X')">Red X</button>
+    <button onclick="chooseSymbol('O')">Blue O</button>
+    <a href="index.html">Back to Home</a> 
+  </div>
+  <div id="game-board"></div>
+  <div id="message"></div>
+  <div id="actions"></div>
+  <canvas id="confetti"></canvas>
+
+  <script>
+    const boardElement = document.getElementById("game-board");
+    const messageElement = document.getElementById("message");
+    const actionsElement = document.getElementById("actions");
+    const confettiCanvas = document.getElementById("confetti");
+    let playerSymbol = "X", aiSymbol = "O", round = 1, playerWins = 0, aiWins = 0;
+    let board = [], gameActive = false, currentTurn = "player";
+
+    function chooseSymbol(symbol) {
+      playerSymbol = symbol;
+      aiSymbol = symbol === "X" ? "O" : "X";
+      document.getElementById("symbol-select").style.display = "none";
+      startGame();
+    }
+
+    function startGame() {
+      board = Array(9).fill("");
+      boardElement.innerHTML = "";
+      currentTurn = round % 2 === 1 ? "player" : "ai";
+      messageElement.textContent = `Round ${round}: ${currentTurn === 'player' ? 'Your Turn' : 'Computer Turn'}`;
+      actionsElement.innerHTML = "";
+      gameActive = true;
+
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement("div");
+        cell.classList.add("cell");
+        cell.dataset.index = i;
+        cell.addEventListener("click", handleCellClick);
+        boardElement.appendChild(cell);
+      }
+
+      if (currentTurn === "ai") {
+        setTimeout(() => {
+          aiMove();
+          updateBoard();
+          if (checkWinner(aiSymbol)) return endRound("ai");
+          if (board.every(c => c)) return endRound("draw");
+          currentTurn = "player";
+          messageElement.textContent = "Your Turn";
+        }, 500);
+      }
+    }
+
+    function handleCellClick(e) {
+      const index = e.target.dataset.index;
+      if (!gameActive || board[index] || currentTurn !== "player") return;
+
+      board[index] = playerSymbol;
+      updateBoard();
+      if (checkWinner(playerSymbol)) return endRound("player");
+      if (board.every(c => c)) return endRound("draw");
+
+      currentTurn = "ai";
+      messageElement.textContent = "Computer Turn";
+      setTimeout(() => {
+        aiMove();
+        updateBoard();
+        if (checkWinner(aiSymbol)) return endRound("ai");
+        if (board.every(c => c)) return endRound("draw");
+        currentTurn = "player";
+        messageElement.textContent = "Your Turn";
+      }, 500);
+    }
+
+    function updateBoard() {
+      const cells = boardElement.querySelectorAll(".cell");
+      cells.forEach((cell, i) => {
+        cell.textContent = board[i];
+        if (board[i] === "X") cell.className = "cell red";
+        else if (board[i] === "O") cell.className = "cell blue";
+      });
+    }
+
+    function aiMove() {
+      let empty = board.map((val, idx) => val ? null : idx).filter(v => v !== null);
+      let index;
+
+      if (round === 1) index = empty[Math.floor(Math.random() * empty.length)];
+      else if (round === 2) index = findBestMove() || empty[Math.floor(Math.random() * empty.length)];
+      else index = findBestMove();
+
+      board[index] = aiSymbol;
+    }
+
+    function findBestMove() {
+      for (let i = 0; i < 9; i++) {
+        if (!board[i]) {
+          board[i] = aiSymbol;
+          if (checkWinner(aiSymbol)) {
+            board[i] = "";
+            return i;
+          }
+          board[i] = "";
+        }
+      }
+      for (let i = 0; i < 9; i++) {
+        if (!board[i]) {
+          board[i] = playerSymbol;
+          if (checkWinner(playerSymbol)) {
+            board[i] = "";
+            return i;
+          }
+          board[i] = "";
+        }
+      }
+      return null;
+    }
+
+    function checkWinner(sym) {
+      const wins = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+      ];
+      return wins.some(pattern => pattern.every(i => board[i] === sym));
+    }
+
+    function endRound(winner) {
+      gameActive = false;
+      if (winner === "player") {
+        playerWins++;
+        messageElement.textContent = "You win this round!";
+      } else if (winner === "ai") {
+        aiWins++;
+        messageElement.textContent = "Computer wins this round.";
+      } else {
+        messageElement.textContent = "It's a draw.";
+      }
+
+      if (playerWins === 2 || aiWins === 2) {
+        setTimeout(endGame, 1000);
+      } else {
+        round++;
+        setTimeout(startGame, 1500);
+      }
+    }
+
+    function endGame() {
+      if (playerWins === 2) {
+        messageElement.textContent = "Congratulations! You win the game! 🎉";
+        launchConfetti();
+      } else {
+        messageElement.textContent = "Better luck next time!";
+      }
+
+      actionsElement.innerHTML = `
+        <button onclick="resetGame()">Play Again</button>
+        <button onclick="location.href="">Exit to Home</button>
+      `;
+    }
+
+    function resetGame() {
+      playerWins = 0;
+      aiWins = 0;
+      round = 1;
+      document.getElementById("symbol-select").style.display = "block";
+      boardElement.innerHTML = "";
+      messageElement.textContent = "";
+      actionsElement.innerHTML = "";
+    }
+
+    function launchConfetti() {
+      const canvas = confettiCanvas;
+      const ctx = canvas.getContext("2d");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      let pieces = Array.from({length: 100}, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height - canvas.height,
+        color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+        size: Math.random() * 10 + 5,
+        speed: Math.random() * 3 + 2
+      }));
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (const p of pieces) {
+          ctx.fillStyle = p.color;
+          ctx.fillRect(p.x, p.y, p.size, p.size);
+          p.y += p.speed;
+          if (p.y > canvas.height) p.y = 0;
+        }
+        requestAnimationFrame(draw);
+      }
+      draw();
+    }
+  </script>
+</body>
+</html>
